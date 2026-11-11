@@ -13,47 +13,63 @@
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
   onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]})"></script>
 <style>
-body{margin:0;background:#fff;color:#111;font:16px/1.6 -apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif}
-main,header,footer{max-width:760px;margin:0 auto;padding:0 16px}
-a{color:#0645ad}
+:root{--ink:#1d1d1f;--dark:#343435;--blue:#36afe5;--link:#1677a8;--line:#dcdcdc;--soft:#f4f6f7}
+body{margin:0;background:#fff;color:var(--ink);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif}
+main,footer{max-width:760px;margin:0 auto;padding:0 16px}
+a{color:var(--link)}
 code,pre{font-family:Menlo,Consolas,monospace;font-size:.88em}
-:not(pre)>code{overflow-wrap:anywhere;background:#f2f2f2;padding:0 .25em}
-header{padding-top:2.5rem}
-h1{font-size:1.9rem;line-height:1.2;margin:0 0 .4rem}
-.byline{color:#555;margin:0 0 1.2rem}
-header img{width:100%;max-width:440px;height:auto;display:block;margin:.5rem 0}
-nav{margin:1rem 0 0;font-size:.95rem;color:#555}
-nav{display:flex;flex-wrap:wrap;gap:.2rem .9rem}
-h2{font-size:1.35rem;margin:2.4rem 0 .6rem;padding-bottom:.25rem;border-bottom:1px solid #ddd}
+:not(pre)>code{overflow-wrap:anywhere;background:var(--soft);padding:0 .25em}
+
+.topbar{background:var(--dark);border-bottom:4px solid var(--blue);color:#fff}
+.topbar .in{max-width:760px;margin:0 auto;padding:1.6rem 16px;display:flex;gap:1.4rem;align-items:center}
+.topbar img{width:96px;height:auto;flex:none}
+.topbar .team{font-size:.78rem;letter-spacing:.15em;text-transform:uppercase;color:var(--blue);font-weight:700;margin:0 0 .3rem}
+h1{font-size:1.75rem;line-height:1.2;margin:0 0 .5rem}
+.byline{color:#cfd2d6;margin:0;font-size:.95rem}
+@media (max-width:560px){.topbar .in{flex-direction:column;align-items:flex-start;gap:.8rem}.topbar img{width:72px}h1{font-size:1.45rem}}
+
+.cover{margin:1.6rem 0 .4rem}
+.cover img{width:100%;max-width:440px;height:auto;display:block}
+nav{display:flex;flex-wrap:wrap;gap:.2rem 1rem;font-size:.95rem;padding:.6rem 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:1rem 0 0}
+nav a{text-decoration:none;color:var(--dark);font-weight:500}
+nav a:hover{color:var(--link)}
+
+h2{font-size:1.35rem;margin:2.6rem 0 .7rem;padding-left:.7rem;border-left:4px solid var(--blue);line-height:1.3}
 h3{font-size:1.08rem;margin:1.6rem 0 .4rem}
 h4{font-size:1rem;margin:1.2rem 0 .3rem}
 p{margin:.6rem 0}
 ul{padding-left:1.3rem}
 .tbl{overflow-x:auto;margin:.8rem 0}
 table{border-collapse:collapse;width:100%;font-size:.93rem}
-th,td{text-align:left;padding:.4rem .6rem;border:1px solid #ccc;vertical-align:top}
-th{background:#f5f5f5;font-weight:600}
+th,td{text-align:left;padding:.45rem .65rem;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--dark);color:#fff;font-weight:600}
+tr:nth-child(even) td{background:#fafbfb}
 
-pre{background:#f5f5f5;border:1px solid #ddd;padding:.8rem 1rem;overflow-x:auto;line-height:1.5}
-pre .c{color:#777}
+pre{background:var(--soft);border-left:3px solid var(--dark);padding:.8rem 1rem;overflow-x:auto;line-height:1.5}
+pre .c{color:#7a7f85}
 .katex-display{overflow-x:auto;overflow-y:hidden;padding:.2rem 0}
 .w{font-size:.95rem}
 video,iframe{display:block;width:100%;aspect-ratio:16/9;border:0;background:#000}
 figure{margin:1rem 0}
 figcaption{font-size:.9rem;color:#555;margin-top:.3rem}
-footer{color:#666;font-size:.9rem;padding-top:1.5rem;padding-bottom:2.5rem;margin-top:2.5rem;border-top:1px solid #ddd}
+footer{color:#666;font-size:.9rem;padding-top:1.5rem;padding-bottom:2.5rem;margin-top:3rem;border-top:1px solid var(--line);display:flex;gap:.8rem;align-items:center}
+footer img{width:36px;height:auto}
 </style>
 </head>
 <body>
 
-<header>
-  <h1>K1 Dribbling Curriculum: 3-Stage Training with AMP and PPO</h1>
-  <p class="byline">Soogon (Ricky) Kim, Eu Joe Wong, Vishal Mailaram<br>NomadZ, ETH Zürich</p>
-  <img src="assets/cover.jpg" alt="Booster K1 humanoid kicking a soccer ball">
-  <nav><a href="#overview">Overview</a><a href="#observations">Observations</a><a href="#dr">Domain randomization</a><a href="#stage1">Stages</a><a href="#rewards">Rewards</a><a href="#summary">Summary</a><a href="#videos">Videos</a></nav>
-</header>
+<header class="topbar"><div class="in">
+  <img src="assets/nomadz-logo.png" alt="NomadZ logo">
+  <div>
+    <p class="team">NomadZ · ETH Zürich</p>
+    <h1>K1 Dribbling Curriculum: 3-Stage Training with AMP and PPO</h1>
+    <p class="byline">Soogon (Ricky) Kim, Eu Joe Wong, Vishal Mailaram</p>
+  </div>
+</div></header>
 
 <main>
+<div class="cover"><img src="assets/cover.jpg" alt="Booster K1 humanoid kicking a soccer ball"></div>
+<nav><a href="#overview">Overview</a><a href="#observations">Observations</a><a href="#dr">Domain randomization</a><a href="#stage1">Stages</a><a href="#rewards">Rewards</a><a href="#summary">Summary</a><a href="#videos">Videos</a></nav>
 
 <section id="overview">
   <h2>Overview</h2>
@@ -285,6 +301,6 @@ reward_yaw_no_view_w: -0.5       <span class="c"># stronger penalty — keep tur
 
 </main>
 
-<footer>Soogon (Ricky) Kim, Eu Joe Wong, Vishal Mailaram · NomadZ, ETH Zürich. Trained with AMP + PPO in MimicKit.</footer>
+<footer><img src="assets/nomadz-logo.png" alt=""><span>Soogon (Ricky) Kim, Eu Joe Wong, Vishal Mailaram · NomadZ, ETH Zürich. Trained with AMP + PPO in MimicKit.</span></footer>
 </body>
 </html>
