@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>K1 Dribbling Curriculum — 3-Stage Training with AMP and PPO</title>
+<meta name="description" content="A three-stage reward curriculum for learning ball dribbling on the Booster K1 humanoid with AMP and PPO.">
+<meta property="og:title" content="K1 Dribbling Curriculum">
+<meta property="og:description" content="3-stage training with AMP and PPO for humanoid ball dribbling.">
+<meta property="og:image" content="assets/cover.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]})"></script>
+<style>
+:root{
+  --bg:#fbfaf7; --surface:#ffffff; --ink:#1b1d21; --muted:#5d636e; --line:#e6e3dc;
+  --accent:#1f7a4d; --accent-soft:#e3f2ea; --warn:#b4531a; --code-bg:#f3f1ec;
+  --s1:#3b82c4; --s2:#c4893b; --s3:#1f7a4d;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#111315; --surface:#181b1e; --ink:#e7e8ea; --muted:#9aa1ab; --line:#2a2e33;
+    --accent:#4cc38a; --accent-soft:#16301f; --warn:#e3925b; --code-bg:#1e2226;
+    --s1:#6aa8e0; --s2:#e0ac66; --s3:#4cc38a;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+code,pre{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:.86em}
+:not(pre)>code{overflow-wrap:anywhere;background:var(--code-bg);padding:.1em .35em;border-radius:4px}
+
+.hero{background:#fff;color:#16181b;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero .wrap{display:grid;grid-template-columns:1.1fr .9fr;align-items:center;gap:1rem;min-height:440px}
+.hero img{width:100%;height:440px;object-fit:cover;object-position:28% center;display:block}
+.eyebrow{font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:#1f7a4d;font-weight:600;margin:0 0 .7rem}
+h1{font-size:clamp(2rem,5vw,3.3rem);line-height:1.06;margin:0;font-weight:700;letter-spacing:-.02em}
+.hero p.sub{font-size:1.08rem;max-width:46ch;color:#4a4f57;margin:1rem 0 0}
+@media (max-width:760px){.hero .wrap{grid-template-columns:1fr;padding-top:2.2rem}.hero img{height:300px;order:-1}}
+.wrap{max-width:980px;margin:0 auto;padding:0 20px}
+nav.toc{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+nav.toc .wrap{display:flex;gap:1.3rem;overflow-x:auto;white-space:nowrap;padding-top:.7rem;padding-bottom:.7rem;font-size:.9rem}
+nav.toc a{color:var(--muted);text-decoration:none}
+nav.toc a:hover{color:var(--ink)}
+
+section{padding:3.2rem 0 1rem}
+h2{font-size:1.65rem;letter-spacing:-.01em;margin:0 0 1rem}
+h3{font-size:1.15rem;margin:2rem 0 .6rem}
+h4{font-size:1rem;margin:1.4rem 0 .4rem}
+p{margin:.6rem 0}
+.lead{font-size:1.08rem;color:var(--muted);max-width:70ch}
+
+.stages{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:1.6rem 0}
+.stage-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:1.1rem 1.2rem;border-top:4px solid var(--c)}
+.stage-card .n{font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--c);font-weight:600}
+.stage-card .g{font-weight:600;margin:.3rem 0 .6rem;line-height:1.35}
+.stage-card .meta{font-size:.85rem;color:var(--muted)}
+.stage-card .meta code{font-size:.8rem}
+
+.callout{background:var(--accent-soft);border-left:3px solid var(--accent);padding:.9rem 1.1rem;border-radius:0 8px 8px 0;margin:1.2rem 0}
+.split{display:flex;height:34px;border-radius:8px;overflow:hidden;font-size:.85rem;font-weight:600;margin:1rem 0 .4rem}
+.split div{display:flex;align-items:center;padding:0 .8rem;color:#fff}
+
+.tbl{overflow-x:auto;margin:1rem 0;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{text-align:left;padding:.6rem .85rem;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;background:var(--code-bg)}
+tr:last-child td{border-bottom:none}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+td.off{color:var(--muted);opacity:.6}
+td.neg{color:var(--warn)}
+td.new{font-weight:600;color:var(--accent)}
+
+pre{background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:1rem 1.1rem;overflow-x:auto;line-height:1.55;margin:.8rem 0}
+pre .k{color:var(--s1)} pre .c{color:var(--muted);font-style:italic} pre .v{color:var(--s2)}
+
+.stage-head{display:flex;align-items:baseline;gap:.8rem;flex-wrap:wrap}
+.pill{font-size:.75rem;font-weight:600;padding:.15rem .6rem;border-radius:999px;background:var(--c);color:#fff}
+.stage-sec{border-left:3px solid var(--c);padding-left:1.2rem}
+
+.reward{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:1.1rem 1.3rem;margin:1rem 0}
+.reward h3{margin:0 0 .3rem}
+.reward .katex-display{margin:.8rem 0;overflow-x:auto;overflow-y:hidden;padding:.2rem 0}
+.reward .w{font-size:.9rem;color:var(--muted)}
+.reward ul{margin:.3rem 0;padding-left:1.2rem}
+
+.videos{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin:1.2rem 0}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+figure video,figure iframe{display:block;width:100%;aspect-ratio:16/9;border:0;background:#000}
+figcaption{padding:.6rem .9rem;font-size:.9rem;font-weight:500}
+.tba{display:flex;align-items:center;justify-content:center;aspect-ratio:16/9;color:var(--muted);font-size:.95rem;background:var(--code-bg)}
+
+footer{border-top:1px solid var(--line);margin-top:3rem;padding:2rem 0;color:var(--muted);font-size:.88rem}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div>
+    <p class="eyebrow">NomadZ · Booster K1 humanoid</p>
+    <h1>K1 Dribbling Curriculum</h1>
+    <p class="sub">Three-stage reward curriculum for learning ball dribbling with Adversarial Motion Priors (AMP) and PPO: approach, then direction, then direction + speed + straightness.</p>
+    </div>
+    <img src="assets/cover.jpg" alt="Booster K1 humanoid kicking a soccer ball">
+  </div>
+</header>
+
+<nav class="toc"><div class="wrap">
+  <a href="#overview">Overview</a><a href="#observations">Observations</a><a href="#dr">Domain randomization</a>
+  <a href="#stage1">Stage 1</a><a href="#stage2">Stage 2</a><a href="#stage3">Stage 3</a>
+  <a href="#rewards">Reward terms</a><a href="#summary">Summary</a><a href="#videos">Videos</a>
+</div></nav>
+
+<main class="wrap">
+
+<section id="overview">
+  <h2>Overview</h2>
+  <p class="lead">The dribbling task is decomposed into three progressively harder subskills. At each stage a new reward term is introduced and earlier terms are de-weighted, so the policy builds each new capability on top of what it already learned instead of solving the full problem in one shot.</p>
+
+  <div class="stages">
+    <div class="stage-card" style="--c:var(--s1)"><div class="n">Stage 1 · B008</div><div class="g">Approach the ball and keep it in view</div><div class="meta">Initialized from scratch</div></div>
+    <div class="stage-card" style="--c:var(--s2)"><div class="n">Stage 2 · B009</div><div class="g">Dribble the ball toward the commanded direction</div><div class="meta">Initialized from <code>B008</code></div></div>
+    <div class="stage-card" style="--c:var(--s3)"><div class="n">Stage 3 · B011</div><div class="g">Dribble at commanded direction and speed on a straight trajectory</div><div class="meta">Initialized from <code>B009</code></div></div>
+  </div>
+
+  <p>Across all three stages the AMP discriminator contributes 60% of the total reward (<code>disc_reward_weight: 0.6</code>) and the task reward contributes 40% (<code>task_reward_weight: 0.4</code>). The discriminator keeps the motion natural (forward locomotion from the reference dataset), while the task reward shapes the dribbling behavior.</p>
+  <div class="split"><div style="flex:6;background:#5b6b7f">AMP discriminator · 0.6</div><div style="flex:4;background:var(--accent)">Task · 0.4</div></div>
+</section>
+
+<section id="observations">
+  <h2>Observation space</h2>
+  <p>The policy observes an <strong>84-dimensional</strong> vector: a 50-dim proprioceptive base observation concatenated with a 34-dim task observation. The layout is identical across all three stages.</p>
+
+  <h3>Base observation (50 dims) — proprioception</h3>
+  <p>Computed in <code>compute_base_obs</code>.</p>
+  <div class="tbl"><table>
+    <tr><th>#</th><th>Field</th><th>Dim</th><th>Description</th></tr>
+    <tr><td>1</td><td><code>gravity_body</code></td><td class="num">3</td><td>Gravity unit vector in the root body frame; tells the policy which way is "down" relative to the torso, a standard proxy for root tilt.</td></tr>
+    <tr><td>2</td><td><code>ang_vel_body</code></td><td class="num">3</td><td>Root angular velocity (roll/pitch/yaw rates) in the root body frame.</td></tr>
+    <tr><td>3</td><td><code>dof_pos</code></td><td class="num">22</td><td>Joint angles for all 22 actuated DoFs of the K1.</td></tr>
+    <tr><td>4</td><td><code>dof_vel</code></td><td class="num">22</td><td>Joint velocities for all 22 actuated DoFs.</td></tr>
+  </table></div>
+  <p>All base terms are root-relative (body frame for gravity and angular velocity), which makes the policy invariant to world-frame orientation.</p>
+
+  <h3>Task observation (34 dims) — dribbling context</h3>
+  <p>Computed in <code>compute_dribbling_observations</code>.</p>
+  <div class="tbl"><table>
+    <tr><th>#</th><th>Field</th><th>Dim</th><th>Description</th></tr>
+    <tr><td>5</td><td><code>ball_pos_history</code></td><td class="num">30</td><td>Last 15 frames of 2D ball position (xy) in the robot's heading frame. In-view frames store the real position; out-of-view frames write zero, so the history doubles as a memory of when the ball was last seen. Flattened as 15 × 2.</td></tr>
+    <tr><td>6</td><td><code>local_tar_dir</code></td><td class="num">2</td><td>Commanded dribbling direction (unit xy) rotated into the heading frame.</td></tr>
+    <tr><td>7</td><td><code>tar_speed</code></td><td class="num">1</td><td>Commanded ball speed (m/s), sampled in <code>[tar_speed_min, tar_speed_max] = [0.5, 2.5]</code>.</td></tr>
+    <tr><td>8</td><td><code>in_view</code></td><td class="num">1</td><td>1 if the ball is inside the head-camera FOV, else 0. Same signal used by the active-sensing reward.</td></tr>
+  </table></div>
+
+  <h4>Design notes</h4>
+  <p><strong>No direct ball velocity.</strong> The policy sees ball positions over time, not velocities, and must infer motion from the 15-step history (≈0.5 s at 30 Hz control).</p>
+  <p><strong>Camera-occlusion memory.</strong> Writing zeros when the ball leaves the FOV turns the history into a "when did I last see it" signal rather than a stale estimate. Together with <code>in_view</code>, the policy can distinguish "the ball is right here" from "the ball hasn't been visible for a while".</p>
+</section>
+
+<section id="dr">
+  <h2>Domain randomization</h2>
+  <p>For robustness to observation noise and external disturbances, the following parameters were randomized throughout training:</p>
+  <div class="tbl"><table>
+    <tr><th>Parameter</th><th>Range</th></tr>
+    <tr><td>Torque scale</td><td class="num">0.95 – 1.00</td></tr>
+    <tr><td>Joint position</td><td class="num">± 0.02 rad</td></tr>
+    <tr><td>Torso mass</td><td class="num">± 2 kg</td></tr>
+    <tr><td>K<sub>p</sub> / K<sub>d</sub></td><td class="num">0.8 – 1.2</td></tr>
+    <tr><td>Action scale</td><td class="num">0.95 – 1.05</td></tr>
+    <tr><td>Surface friction scale</td><td class="num">0.7 – 1.3</td></tr>
+    <tr><td>Ball friction</td><td class="num">Stages 1 &amp; 2: 0.55 – 0.85 · Stage 3: 0.3 – 0.5</td></tr>
+  </table></div>
+</section>
+
+<section id="stage1" class="stage-sec" style="--c:var(--s1)">
+  <div class="stage-head"><h2>Stage 1 — Approach the ball</h2><span class="pill">B008</span></div>
+  <p><strong>Objective.</strong> Walk toward the ball and keep the head tilted so the ball stays within the onboard camera's field of view. No dribbling direction or speed is enforced yet; the only requirement is to close distance.</p>
+<pre><span class="k">episode_length</span>: <span class="v">20.0</span>
+<span class="k">reward_chasing_w</span>: <span class="v">2.0</span>
+<span class="k">reward_chasing_scale</span>: <span class="v">2.0</span>
+<span class="k">reward_ball_movement_w</span>: <span class="v">2.5</span>
+<span class="k">ball_movement_min_vel</span>: <span class="v">0.5</span>
+<span class="k">ball_movement_speed_cap</span>: <span class="v">1.5</span>
+<span class="k">reward_ball_dir_w</span>: <span class="v">0.0</span>     <span class="c"># disabled — direction not enforced yet</span>
+<span class="k">reward_ball_speed_w</span>: <span class="v">0.0</span>   <span class="c"># disabled — speed not enforced yet</span>
+<span class="k">reward_active_sensing_w</span>: <span class="v">0.2</span>
+<span class="k">reward_yaw_alignment_w</span>: <span class="v">0.2</span>
+<span class="k">reward_yaw_no_view_w</span>: <span class="v">-0.2</span></pre>
+  <h4>What these weights encode</h4>
+  <ul>
+    <li>A strong chasing reward (<code>w=2.0</code>) pulls the robot toward the ball.</li>
+    <li>A ball-movement reward (<code>w=2.5</code>) gives broad credit for any ball motion above 0.5 m/s, regardless of direction. This acts as an exploration signal: the robot can stumble into the ball and be rewarded for nudging it.</li>
+    <li>Active-sensing and yaw-alignment terms keep the ball in the camera FOV.</li>
+  </ul>
+  <p><strong>Result.</strong> The robot reliably approaches the ball and tilts its head to keep it in view. This is the base behavior everything downstream builds on.</p>
+</section>
+
+<section id="stage2" class="stage-sec" style="--c:var(--s2)">
+  <div class="stage-head"><h2>Stage 2 — Directional dribbling</h2><span class="pill">B009</span></div>
+  <p><strong>Objective.</strong> Dribble the ball toward the commanded direction. Speed is not yet a constraint.</p>
+<pre><span class="k">reward_chasing_w</span>: <span class="v">0.5</span>           <span class="c"># reduced — approach is already learned</span>
+<span class="k">reward_chasing_scale</span>: <span class="v">0.5</span>
+<span class="k">reward_ball_dir_w</span>: <span class="v">2.5</span>          <span class="c"># NEW — primary learning signal this stage</span>
+<span class="k">ball_dir_min_vel</span>: <span class="v">0.1</span>
+<span class="k">reward_ball_movement_w</span>: <span class="v">0.5</span>     <span class="c"># reduced — broad movement no longer the goal</span>
+<span class="k">reward_ball_speed_w</span>: <span class="v">0.0</span>        <span class="c"># still disabled</span>
+<span class="k">reward_active_sensing_w</span>: <span class="v">0.2</span>
+<span class="k">reward_yaw_alignment_w</span>: <span class="v">0.2</span>
+<span class="k">reward_yaw_no_view_w</span>: <span class="v">-0.2</span></pre>
+  <h4>What changed from Stage 1</h4>
+  <ul>
+    <li>Chasing weight drops <code>2.0 → 0.5</code>. Approach is already learned; heavy chasing would compete with direction control.</li>
+    <li>A new directional reward at <code>w=2.5</code> pays out when the ball moves in the commanded direction, independent of speed magnitude.</li>
+    <li>Ball-movement reward drops <code>2.5 → 0.5</code>: the ball should still move, but directed motion is now preferred over any motion.</li>
+  </ul>
+  <p><strong>Result.</strong> The robot positions itself relative to the ball and uses the left or right foot to redirect it when it drifts off-line. The improved head tilt (from Stage 1's camera fix) makes ball-relative positioning much more accurate than in earlier runs. The ball travels in roughly the correct direction, but its <em>speed</em> is whatever the policy happens to produce.</p>
+</section>
+
+<section id="stage3" class="stage-sec" style="--c:var(--s3)">
+  <div class="stage-head"><h2>Stage 3 — Direction + speed + straight trajectory</h2><span class="pill">B011</span></div>
+  <p><strong>Objective.</strong> Dribble at both the commanded direction <em>and</em> the commanded speed, keeping the ball on a straight trajectory even when individual kicks are imperfect.</p>
+<pre><span class="k">reward_chasing_w</span>: <span class="v">0.2</span>            <span class="c"># further reduced</span>
+<span class="k">reward_chasing_scale</span>: <span class="v">0.2</span>
+<span class="k">reward_ball_dir_w</span>: <span class="v">2.0</span>           <span class="c"># maintained</span>
+<span class="k">reward_ball_speed_w</span>: <span class="v">1.5</span>         <span class="c"># NEW — matches commanded speed magnitude</span>
+<span class="k">reward_ball_speed_scale</span>: <span class="v">1.0</span>
+<span class="k">reward_ball_perp_vel_w</span>: <span class="v">1.0</span>      <span class="c"># NEW — penalizes sideways ball drift</span>
+<span class="k">ball_perp_vel_scale</span>: <span class="v">4.0</span>
+<span class="k">reward_ball_movement_w</span>: <span class="v">0.0</span>      <span class="c"># disabled — direction+speed now take over</span>
+<span class="k">reward_yaw_no_view_w</span>: <span class="v">-0.5</span>       <span class="c"># stronger penalty — keep turning to find ball</span></pre>
+  <h4>What changed from Stage 2</h4>
+  <ul>
+    <li>A new ball-speed reward (<code>w=1.5</code>) separately rewards matching the commanded speed. Direction and speed are split into two terms rather than one ball-velocity match, so the policy can earn partial credit on each axis, avoiding the all-or-nothing gradient of a joint velocity match.</li>
+    <li>A new perpendicular-velocity term (<code>w=1.0</code>) targets the component of ball velocity perpendicular to the commanded direction. This addresses drift: even if a single kick is imperfect, the trajectory stays close to a straight line <em>on average</em>.</li>
+    <li>The yaw-no-view penalty strengthens <code>-0.2 → -0.5</code>, pushing harder for the robot to turn and reacquire the ball when it leaves the FOV.</li>
+    <li>Ball movement is disabled; speed and direction rewards replace it.</li>
+  </ul>
+  <p><strong>Result.</strong> The robot kicks the ball in approximately the commanded direction at approximately the commanded speed, with less lateral drift than Stage 2. Runs from this stage are the candidates for hardware deployment.</p>
+</section>
+
+<section id="rewards">
+  <h2>Reward terms</h2>
+  <p>All formulas come from <code>compute_dribbling_reward</code> in <code>mimickit/envs/envs_k1/task_k1_dribbling_env.py</code>. Terms that are zero across B008–B011 are omitted.</p>
+
+  <div class="reward">
+    <h3>1. Active sensing</h3>
+    $$r = w \cdot \mathbb{1}\big[\text{ball in camera FOV}\big]$$
+    <p>Binary per-step reward: 1 when the ball is inside the onboard camera's horizontal/vertical FOV, 0 otherwise. The FOV is anchored to the <code>Head_2</code> body with a camera pitch offset of −12.2°.</p>
+    <p><strong>Purpose.</strong> A direct incentive to orient the head so the ball is visible; without it the head drifts freely and the vision pipeline loses the ball.</p>
+    <p class="w">Weight: <code>0.2</code> in all three stages.</p>
+  </div>
+
+  <div class="reward">
+    <h3>2. Chasing</h3>
+    $$r = w \cdot \exp\!\left(-\,\text{scale}\cdot\lVert p_{\text{ball}} - p_{\text{robot}}\rVert^2\right)$$
+    <p>Gaussian on the 2D distance between ball and robot root; peaks at 1 when the robot is on the ball and decays smoothly with distance.</p>
+    <p><strong>Purpose.</strong> Pulls the robot toward the ball. The distance-only form is intentional: it still fires when the ball is out of view.</p>
+    <ul class="w">
+      <li>Stage 1: <code>w=2.0, scale=2.0</code> — dominant, drives approach.</li>
+      <li>Stage 2: <code>w=0.5, scale=0.5</code> — reduced, approach already learned.</li>
+      <li>Stage 3: <code>w=0.2, scale=0.2</code> — minimal, prevents wandering off.</li>
+    </ul>
+  </div>
+
+  <div class="reward">
+    <h3>3. Yaw alignment — ball in view</h3>
+    $$r = w \cdot \exp\!\left(-\,\text{scale}\cdot\big(\theta_{\text{cmd}}^2 + \theta_{\text{ball}}^2\big)\right)$$
+    <p>Active only when the ball is in the FOV. \(\theta_{\text{cmd}}\) is the angle between the robot heading and the commanded facing direction; \(\theta_{\text{ball}}\) is the angle between the heading and the direction to the ball.</p>
+    <p><strong>Purpose.</strong> Rewards simultaneously facing the commanded direction and the ball, so the torso lines up before a kick.</p>
+    <p class="w">Weight: <code>w=0.2, scale=2.0</code> in all three stages.</p>
+  </div>
+
+  <div class="reward">
+    <h3>4. Yaw alignment — ball out of view (penalty)</h3>
+    $$r = w_{\text{no\_view}} \cdot \Big\lvert\, \dot\psi_{\text{robot}} - \dot\psi_{\max}\cdot \operatorname{sign}\!\big(f_{\text{robot}} \times f_{\text{ball}}\big) \Big\rvert$$
+    <p>Active only when the ball is not in the FOV. \(\dot\psi_{\text{robot}}\) is the robot's yaw rate and \(\dot\psi_{\max}\) a desired turn rate (1 rad/s). The sign of the cross product tells the robot which way to rotate to bring the ball back into view.</p>
+    <p><strong>Purpose.</strong> With \(w_{\text{no\_view}} &lt; 0\), the robot loses reward unless it turns toward the ball at roughly the desired rate. Replaces the in-view term whenever the ball slips out of the FOV.</p>
+    <ul class="w">
+      <li>Stages 1 &amp; 2: <code>w=-0.2</code> (mild).</li>
+      <li>Stage 3: <code>w=-0.5</code> (stronger, to fight a collapse-to-stand behavior observed in training).</li>
+    </ul>
+  </div>
+
+  <div class="reward">
+    <h3>5. Ball direction</h3>
+    $$r = w \cdot \max\!\big(0,\ \hat v_{\text{ball}}\cdot \hat d_{\text{cmd}}\big)\cdot \mathbb{1}\big[\lVert v_{\text{ball}}\rVert &gt; v_{\min}\big]$$
+    <p>Dot product of the ball's unit velocity with the commanded unit direction, clamped to [0, 1] and gated on the ball moving faster than <code>ball_dir_min_vel = 0.1</code> m/s.</p>
+    <p><strong>Purpose.</strong> Rewards direction only, independent of speed. The speed gate prevents farming the reward while the ball sits still, where the normalized direction \(\hat v_{\text{ball}}\) becomes numerically ill-defined as \(v_{\text{ball}}\to 0\).</p>
+    <ul class="w">
+      <li>Stage 1: <code>w=0.0</code> (disabled).</li>
+      <li>Stage 2: <code>w=2.5</code>.</li>
+      <li>Stage 3: <code>w=2.0</code>.</li>
+    </ul>
+  </div>
+
+  <div class="reward">
+    <h3>6. Ball speed</h3>
+    $$r = w \cdot \exp\!\left(-\,\text{scale}\cdot\big(\lVert v_{\text{ball}}\rVert - v_{\text{cmd}}\big)^2\right)$$
+    <p>Gaussian on the error between ball speed and commanded speed; peaks at a match and falls off if the ball is too fast or too slow.</p>
+    <p><strong>Purpose.</strong> Rewards speed only, independent of direction. Introduced in Stage 3 because Stage 2's direction reward does not distinguish 0.3 m/s from 3 m/s. A separate speed term gives independent partial credit, which is easier to optimize than a joint velocity match.</p>
+    <ul class="w">
+      <li>Stages 1 &amp; 2: <code>w=0.0</code> (disabled).</li>
+      <li>Stage 3: <code>w=1.5, scale=1.0</code>.</li>
+    </ul>
+  </div>
+
+  <div class="reward">
+    <h3>7. Ball movement</h3>
+    $$r = w \cdot \operatorname{clamp}\!\left(\frac{\lVert v_{\text{ball}}\rVert - v_{\min}}{v_{\text{cap}} - v_{\min}},\ 0,\ 1\right)$$
+    <p>With <code>ball_movement_max_vel = 0</code> (no upper ramp-down): a linear ramp from <code>ball_movement_min_vel = 0.5</code> m/s to <code>ball_movement_speed_cap = 1.5</code> m/s. Rewards <em>any</em> ball motion regardless of direction, saturating at 1 above the cap.</p>
+    <p><strong>Purpose.</strong> Exploration reward that encourages early contact with the ball, before caring where it goes.</p>
+    <ul class="w">
+      <li>Stage 1: <code>w=2.5</code> (dominant exploration signal).</li>
+      <li>Stage 2: <code>w=0.5</code> (reduced but active).</li>
+      <li>Stage 3: <code>w=0.0</code> (disabled; replaced by direction + speed).</li>
+    </ul>
+  </div>
+
+  <div class="reward">
+    <h3>8. Ball perpendicular velocity</h3>
+    $$r = w \cdot \mathbb{1}\big[\lVert v_{\text{ball}}\rVert &gt; v_{\min}\big]\cdot \exp\!\left(-\,\text{scale}\cdot v_\perp^2\right)$$
+    <p>With \(\hat d = (d_x, d_y)\), the perpendicular unit vector is \((-d_y,\, d_x)\) and \(v_\perp = v_{\text{ball}}\cdot(-d_y,\, d_x)\).</p>
+    <p><strong>Purpose.</strong> Discourages sideways (off-axis) ball motion, anchoring the trajectory near the commanded line. Unlike an anchored-line reward it is stateless and per-step: it does not correct existing drift, but stops new drift from accumulating. The speed gate (\(\lVert v_{\text{ball}}\rVert &gt; 0.1\) m/s) prevents reward farming when the ball is stationary.</p>
+    <ul class="w">
+      <li>Stages 1 &amp; 2: <code>w=0.0</code> (disabled).</li>
+      <li>Stage 3: <code>w=1.0, scale=4.0</code>.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="summary">
+  <h2>Summary of weights</h2>
+  <div class="tbl"><table>
+    <tr><th>Reward term</th><th>Stage 1 (B008)</th><th>Stage 2 (B009)</th><th>Stage 3 (B011)</th></tr>
+    <tr><td>Active sensing</td><td class="num">0.2</td><td class="num">0.2</td><td class="num">0.2</td></tr>
+    <tr><td>Chasing</td><td class="num">2.0 (scale 2.0)</td><td class="num">0.5 (scale 0.5)</td><td class="num">0.2 (scale 0.2)</td></tr>
+    <tr><td>Yaw alignment (in view)</td><td class="num">0.2</td><td class="num">0.2</td><td class="num">0.2</td></tr>
+    <tr><td>Yaw alignment (no view, penalty)</td><td class="num neg">−0.2</td><td class="num neg">−0.2</td><td class="num neg">−0.5</td></tr>
+    <tr><td>Ball direction</td><td class="num off">0.0</td><td class="num new">2.5</td><td class="num">2.0</td></tr>
+    <tr><td>Ball speed</td><td class="num off">0.0</td><td class="num off">0.0</td><td class="num new">1.5</td></tr>
+    <tr><td>Ball movement</td><td class="num">2.5</td><td class="num">0.5</td><td class="num off">0.0</td></tr>
+    <tr><td>Ball perpendicular velocity</td><td class="num off">0.0</td><td class="num off">0.0</td><td class="num new">1.0</td></tr>
+    <tr><td>AMP task / disc weight</td><td class="num">0.4 / 0.6</td><td class="num">0.4 / 0.6</td><td class="num">0.4 / 0.6</td></tr>
+    <tr><td>Ball friction / restitution</td><td class="num">0.55–0.85 / 0.6</td><td class="num">0.55–0.85 / 0.6</td><td class="num">0.3–0.5 / 0.6</td></tr>
+  </table></div>
+  <div class="callout">The pattern is consistent: broad exploration signals (chasing, ball movement) dominate early, then give way to precise task signals (ball direction, ball speed, perpendicular velocity) as prerequisite skills are learned.</div>
+</section>
+
+<section id="videos">
+  <h2>Videos</h2>
+  <div class="videos">
+    <figure><video controls muted playsinline preload="metadata" src="assets/videos/stage1.mp4"></video><figcaption>Stage 1 — approach (B008)</figcaption></figure>
+    <figure><video controls muted playsinline preload="metadata" src="assets/videos/stage2.mp4"></video><figcaption>Stage 2 — directional dribbling (B009)</figcaption></figure>
+    <figure><video controls muted playsinline preload="metadata" src="assets/videos/stage3.mp4"></video><figcaption>Stage 3 — direction + speed (B011)</figcaption></figure>
+    <figure><iframe src="https://www.youtube-nocookie.com/embed/rSehRZI6RqY?rel=0" title="MuJoCo sim-to-sim" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe><figcaption>MuJoCo (sim-to-sim)</figcaption></figure>
+    <figure><div class="tba">Coming soon</div><figcaption>Sim-to-real</figcaption></figure>
+  </div>
+</section>
+
+</main>
+
+<footer><div class="wrap">Soogon (Ricky) Kim · NomadZ, ETH Zürich · Trained with AMP + PPO in MimicKit</div></footer>
+</body>
+</html>
