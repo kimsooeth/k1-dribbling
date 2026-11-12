@@ -109,10 +109,6 @@ footer img{width:36px;height:auto}
     <tr><td>7</td><td><code>tar_speed</code></td><td class="num">1</td><td>Commanded ball speed (m/s), sampled in <code>[tar_speed_min, tar_speed_max] = [0.5, 2.5]</code>.</td></tr>
     <tr><td>8</td><td><code>in_view</code></td><td class="num">1</td><td>1 if the ball is inside the head-camera FOV, else 0. Same signal used by the active-sensing reward.</td></tr>
   </table></div>
-
-  <h4>Design notes</h4>
-  <p><strong>No direct ball velocity.</strong> The policy sees ball positions over time, not velocities, and must infer motion from the 15-step history (≈0.5 s at 30 Hz control).</p>
-  <p><strong>Camera-occlusion memory.</strong> Writing zeros when the ball leaves the FOV turns the history into a "when did I last see it" signal rather than a stale estimate. Together with <code>in_view</code>, the policy can distinguish "the ball is right here" from "the ball hasn't been visible for a while".</p>
 </section>
 
 <section id="dr">
@@ -144,13 +140,6 @@ reward_ball_speed_w: 0.0   <span class="c"># disabled — speed not enforced yet
 reward_active_sensing_w: 0.2
 reward_yaw_alignment_w: 0.2
 reward_yaw_no_view_w: -0.2</pre>
-  <h4>What these weights encode</h4>
-  <ul>
-    <li>A strong chasing reward (<code>w=2.0</code>) pulls the robot toward the ball.</li>
-    <li>A ball-movement reward (<code>w=2.5</code>) gives broad credit for any ball motion above 0.5 m/s, regardless of direction. This acts as an exploration signal: the robot can stumble into the ball and be rewarded for nudging it.</li>
-    <li>Active-sensing and yaw-alignment terms keep the ball in the camera FOV.</li>
-  </ul>
-  <p><strong>Result.</strong> The robot reliably approaches the ball and tilts its head to keep it in view. This is the base behavior everything downstream builds on.</p>
 </section>
 
 <section id="stage2">
@@ -165,13 +154,6 @@ reward_ball_speed_w: 0.0        <span class="c"># still disabled</span>
 reward_active_sensing_w: 0.2
 reward_yaw_alignment_w: 0.2
 reward_yaw_no_view_w: -0.2</pre>
-  <h4>What changed from Stage 1</h4>
-  <ul>
-    <li>Chasing weight drops <code>2.0 → 0.5</code>. Approach is already learned; heavy chasing would compete with direction control.</li>
-    <li>A new directional reward at <code>w=2.5</code> pays out when the ball moves in the commanded direction, independent of speed magnitude.</li>
-    <li>Ball-movement reward drops <code>2.5 → 0.5</code>: the ball should still move, but directed motion is now preferred over any motion.</li>
-  </ul>
-  <p><strong>Result.</strong> The robot positions itself relative to the ball and uses the left or right foot to redirect it when it drifts off-line. The improved head tilt (from Stage 1's camera fix) makes ball-relative positioning much more accurate than in earlier runs. The ball travels in roughly the correct direction, but its <em>speed</em> is whatever the policy happens to produce.</p>
 </section>
 
 <section id="stage3">
@@ -186,14 +168,6 @@ reward_ball_perp_vel_w: 1.0      <span class="c"># NEW — penalizes sideways ba
 ball_perp_vel_scale: 4.0
 reward_ball_movement_w: 0.0      <span class="c"># disabled — direction+speed now take over</span>
 reward_yaw_no_view_w: -0.5       <span class="c"># stronger penalty — keep turning to find ball</span></pre>
-  <h4>What changed from Stage 2</h4>
-  <ul>
-    <li>A new ball-speed reward (<code>w=1.5</code>) separately rewards matching the commanded speed. Direction and speed are split into two terms rather than one ball-velocity match, so the policy can earn partial credit on each axis, avoiding the all-or-nothing gradient of a joint velocity match.</li>
-    <li>A new perpendicular-velocity term (<code>w=1.0</code>) targets the component of ball velocity perpendicular to the commanded direction. This addresses drift: even if a single kick is imperfect, the trajectory stays close to a straight line <em>on average</em>.</li>
-    <li>The yaw-no-view penalty strengthens <code>-0.2 → -0.5</code>, pushing harder for the robot to turn and reacquire the ball when it leaves the FOV.</li>
-    <li>Ball movement is disabled; speed and direction rewards replace it.</li>
-  </ul>
-  <p><strong>Result.</strong> The robot kicks the ball in approximately the commanded direction at approximately the commanded speed, with less lateral drift than Stage 2. Runs from this stage are the candidates for hardware deployment.</p>
 </section>
 
 <section id="rewards">
@@ -203,13 +177,11 @@ reward_yaw_no_view_w: -0.5       <span class="c"># stronger penalty — keep tur
       <h3>1. Active sensing</h3>
     $$r = w \cdot \mathbb{1}\big[\text{ball in camera FOV}\big]$$
     <p>Binary per-step reward: 1 when the ball is inside the onboard camera's horizontal/vertical FOV, 0 otherwise. The FOV is anchored to the <code>Head_2</code> body with a camera pitch offset of −12.2°.</p>
-    <p><strong>Purpose.</strong> A direct incentive to orient the head so the ball is visible; without it the head drifts freely and the vision pipeline loses the ball.</p>
     <p class="w">Weight: <code>0.2</code> in all three stages.</p>
 
       <h3>2. Chasing</h3>
     $$r = w \cdot \exp\!\left(-\,\text{scale}\cdot\lVert p_{\text{ball}} - p_{\text{robot}}\rVert^2\right)$$
     <p>Gaussian on the 2D distance between ball and robot root; peaks at 1 when the robot is on the ball and decays smoothly with distance.</p>
-    <p><strong>Purpose.</strong> Pulls the robot toward the ball. The distance-only form is intentional: it still fires when the ball is out of view.</p>
     <ul class="w">
       <li>Stage 1: <code>w=2.0, scale=2.0</code> — dominant, drives approach.</li>
       <li>Stage 2: <code>w=0.5, scale=0.5</code> — reduced, approach already learned.</li>
@@ -219,13 +191,11 @@ reward_yaw_no_view_w: -0.5       <span class="c"># stronger penalty — keep tur
       <h3>3. Yaw alignment — ball in view</h3>
     $$r = w \cdot \exp\!\left(-\,\text{scale}\cdot\big(\theta_{\text{cmd}}^2 + \theta_{\text{ball}}^2\big)\right)$$
     <p>Active only when the ball is in the FOV. \(\theta_{\text{cmd}}\) is the angle between the robot heading and the commanded facing direction; \(\theta_{\text{ball}}\) is the angle between the heading and the direction to the ball.</p>
-    <p><strong>Purpose.</strong> Rewards simultaneously facing the commanded direction and the ball, so the torso lines up before a kick.</p>
     <p class="w">Weight: <code>w=0.2, scale=2.0</code> in all three stages.</p>
 
       <h3>4. Yaw alignment — ball out of view (penalty)</h3>
     $$r = w_{\text{no\_view}} \cdot \Big\lvert\, \dot\psi_{\text{robot}} - \dot\psi_{\max}\cdot \operatorname{sign}\!\big(f_{\text{robot}} \times f_{\text{ball}}\big) \Big\rvert$$
     <p>Active only when the ball is not in the FOV. \(\dot\psi_{\text{robot}}\) is the robot's yaw rate and \(\dot\psi_{\max}\) a desired turn rate (1 rad/s). The sign of the cross product tells the robot which way to rotate to bring the ball back into view.</p>
-    <p><strong>Purpose.</strong> With \(w_{\text{no\_view}} &lt; 0\), the robot loses reward unless it turns toward the ball at roughly the desired rate. Replaces the in-view term whenever the ball slips out of the FOV.</p>
     <ul class="w">
       <li>Stages 1 &amp; 2: <code>w=-0.2</code> (mild).</li>
       <li>Stage 3: <code>w=-0.5</code> (stronger, to fight a collapse-to-stand behavior observed in training).</li>
@@ -234,7 +204,6 @@ reward_yaw_no_view_w: -0.5       <span class="c"># stronger penalty — keep tur
       <h3>5. Ball direction</h3>
     $$r = w \cdot \max\!\big(0,\ \hat v_{\text{ball}}\cdot \hat d_{\text{cmd}}\big)\cdot \mathbb{1}\big[\lVert v_{\text{ball}}\rVert &gt; v_{\min}\big]$$
     <p>Dot product of the ball's unit velocity with the commanded unit direction, clamped to [0, 1] and gated on the ball moving faster than <code>ball_dir_min_vel = 0.1</code> m/s.</p>
-    <p><strong>Purpose.</strong> Rewards direction only, independent of speed. The speed gate prevents farming the reward while the ball sits still, where the normalized direction \(\hat v_{\text{ball}}\) becomes numerically ill-defined as \(v_{\text{ball}}\to 0\).</p>
     <ul class="w">
       <li>Stage 1: <code>w=0.0</code> (disabled).</li>
       <li>Stage 2: <code>w=2.5</code>.</li>
@@ -244,7 +213,6 @@ reward_yaw_no_view_w: -0.5       <span class="c"># stronger penalty — keep tur
       <h3>6. Ball speed</h3>
     $$r = w \cdot \exp\!\left(-\,\text{scale}\cdot\big(\lVert v_{\text{ball}}\rVert - v_{\text{cmd}}\big)^2\right)$$
     <p>Gaussian on the error between ball speed and commanded speed; peaks at a match and falls off if the ball is too fast or too slow.</p>
-    <p><strong>Purpose.</strong> Rewards speed only, independent of direction. Introduced in Stage 3 because Stage 2's direction reward does not distinguish 0.3 m/s from 3 m/s. A separate speed term gives independent partial credit, which is easier to optimize than a joint velocity match.</p>
     <ul class="w">
       <li>Stages 1 &amp; 2: <code>w=0.0</code> (disabled).</li>
       <li>Stage 3: <code>w=1.5, scale=1.0</code>.</li>
@@ -253,7 +221,6 @@ reward_yaw_no_view_w: -0.5       <span class="c"># stronger penalty — keep tur
       <h3>7. Ball movement</h3>
     $$r = w \cdot \operatorname{clamp}\!\left(\frac{\lVert v_{\text{ball}}\rVert - v_{\min}}{v_{\text{cap}} - v_{\min}},\ 0,\ 1\right)$$
     <p>With <code>ball_movement_max_vel = 0</code> (no upper ramp-down): a linear ramp from <code>ball_movement_min_vel = 0.5</code> m/s to <code>ball_movement_speed_cap = 1.5</code> m/s. Rewards <em>any</em> ball motion regardless of direction, saturating at 1 above the cap.</p>
-    <p><strong>Purpose.</strong> Exploration reward that encourages early contact with the ball, before caring where it goes.</p>
     <ul class="w">
       <li>Stage 1: <code>w=2.5</code> (dominant exploration signal).</li>
       <li>Stage 2: <code>w=0.5</code> (reduced but active).</li>
@@ -263,7 +230,6 @@ reward_yaw_no_view_w: -0.5       <span class="c"># stronger penalty — keep tur
       <h3>8. Ball perpendicular velocity</h3>
     $$r = w \cdot \mathbb{1}\big[\lVert v_{\text{ball}}\rVert &gt; v_{\min}\big]\cdot \exp\!\left(-\,\text{scale}\cdot v_\perp^2\right)$$
     <p>With \(\hat d = (d_x, d_y)\), the perpendicular unit vector is \((-d_y,\, d_x)\) and \(v_\perp = v_{\text{ball}}\cdot(-d_y,\, d_x)\).</p>
-    <p><strong>Purpose.</strong> Discourages sideways (off-axis) ball motion, anchoring the trajectory near the commanded line. Unlike an anchored-line reward it is stateless and per-step: it does not correct existing drift, but stops new drift from accumulating. The speed gate (\(\lVert v_{\text{ball}}\rVert &gt; 0.1\) m/s) prevents reward farming when the ball is stationary.</p>
     <ul class="w">
       <li>Stages 1 &amp; 2: <code>w=0.0</code> (disabled).</li>
       <li>Stage 3: <code>w=1.0, scale=4.0</code>.</li>
@@ -285,7 +251,6 @@ reward_yaw_no_view_w: -0.5       <span class="c"># stronger penalty — keep tur
     <tr><td>AMP task / disc weight</td><td class="num">0.4 / 0.6</td><td class="num">0.4 / 0.6</td><td class="num">0.4 / 0.6</td></tr>
     <tr><td>Ball friction / restitution</td><td class="num">0.55–0.85 / 0.6</td><td class="num">0.55–0.85 / 0.6</td><td class="num">0.3–0.5 / 0.6</td></tr>
   </table></div>
-  <p>The pattern is consistent: broad exploration signals (chasing, ball movement) dominate early, then give way to precise task signals (ball direction, ball speed, perpendicular velocity) as prerequisite skills are learned.</p>
 </section>
 
 <section id="videos">
